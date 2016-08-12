@@ -41,10 +41,8 @@
       </tr>
     {% endfor %}
   </table>
-  <form method="POST" action="{{ post_url }}">
-    {% for field, value in payload.items %}
-      <input type="hidden" name="{{ field }}" value="{{ value }}">
-    {% endfor %}
+  <form method="post" action="{% url 'payments:submit' %}">
+    {% csrf_token %}
     <input type="submit" class="btn btn-primary pull-right"/>
   </form>
 {% endblock %}
