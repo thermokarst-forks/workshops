@@ -18,6 +18,7 @@ from django.views.generic.edit import FormMixin
 from django.conf import settings
 
 import requests
+from lxml import html
 from extra_views import FormSetView
 
 from .models import Workshop, Order, OrderItem, Rate
@@ -197,15 +198,80 @@ class SubmitOrder(View):
             payload['metadata_item_%s,%s' % (4, i)] = settings.PSF_SPEEDTYPE
             payload['metadata_item_%s,%s' % (5, i)] = settings.PSF_ACCT_NUMBER
 
-        r = requests.post(settings.PAYMENT_URL, data=payload,
-                          verify=settings.PAYMENT_CERT_BUNDLE)
-        # TODO: We should use something like lxml2 to parse the form, then do
-        # the second post on behalf of the customer, instead of just returning
-        # the intermediate form as-is.
-        response = HttpResponse(r.text)
-        for key in r.headers:
-            if key not in ['Connection', 'Keep-Alive']:
-                response[key] = r.headers[key]
+            # http://stackoverflow.com/a/4581997/313548
+            def get_client_ip(req):
+                if req.META.get('HTTP_X_FORWARDED_FOR'):
+                    return req.META.get('HTTP_X_FORWARDED_FOR')
+                else:
+                    return req.META.get('REMOTE_ADDR')
+            ip = get_client_ip(request)
+            ip = '134.114.101.46'
+
+        with requests.Session() as s:
+            header_filter = (
+                # 'CONTENT_TYPE',
+                # 'HTTP_ACCEPT',
+                # 'HTTP_ACCEPT_CHARSET',
+                # 'HTTP_ACCEPT_ENCODING',
+                # 'HTTP_ACCEPT_LANGUAGE',
+                'HTTP_CACHE_CONTROL',
+                # 'HTTP_CONNECTION',
+                'HTTP_HOST',
+                'HTTP_KEEP_ALIVE',
+                'HTTP_REFERER',
+                'HTTP_USER_AGENT',
+                # 'QUERY_STRING',
+                'REMOTE_ADDR',
+                'REMOTE_HOST',
+                # 'REQUEST_METHOD',
+                # 'SCRIPT_NAME',
+                'SERVER_NAME',
+                'SERVER_PORT',
+                'SERVER_PROTOCOL',
+                'SERVER_SOFTWARE',
+            )
+
+            # import re
+            # regex = re.compile('^HTTP_')
+            # headers = dict((regex.sub('', header), value) for (header, value)
+            #                in request.META.items()
+            #                if header.startswith('HTTP_'))
+
+            headers = dict([(k.replace('HTTP_', ''), request.META[k]) for k in header_filter
+                            if k in request.META])
+            headers['REMOTE_ADDR'] = ip
+
+            print('session headers\n', s.headers)
+            print('req headers\n', headers)
+            s.headers.update(headers)
+
+            r1 = s.post(settings.PAYMENT_URL, data=payload,
+                        verify=settings.PAYMENT_CERT_BUNDLE)
+            body = html.document_fromstring(r1.text)
+            form = body.find('.//form')
+            payload = dict(form.form_values())
+            payload['customer_ip_address'] = ip
+            print('payload\n', payload)
+
+            print('session headers\n', s.headers)
+            url = form.action
+            r2 = s.post(url, data=payload, allow_redirects=False)
+            print(r2.request.headers)
+            print('r2\n', r2.request, r2.request.headers)
+            print('post response text\n', r2.text)
+
+            # Prepare final response to client
+            response = HttpResponse(status=r2.status_code)
+            prohibited = ['Connection', 'Keep-Alive', 'Proxy-Authenticate',
+                          'Proxy-Authorization', 'TE', 'Trailers',
+                          'Transfer-Encoding', 'Upgrade']
+            for key in r2.headers:
+                if key not in prohibited:
+                    response[key] = r2.headers[key]
+            response['REMOTE_ADDR'] = ip
+            for key, val in s.cookies.items():
+                response.set_cookie(key, val)
+
         return response
 
 
