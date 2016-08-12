@@ -157,6 +157,43 @@ class ConfirmOrder(SessionConfirmMixin, TemplateView):
         context['order_email'] = order['email']
         context['order_total'] = order['order_total']
         context['workshop'] = Workshop.objects.get(slug=kwargs['slug'])
+
+        order_data = self.request.session['order']
+        order = Order.objects.create(contact_email=order_data['email'],
+                                     order_total=order_data['order_total'])
+        items = []
+        for ticket in order_data['tickets']:
+            items.append(OrderItem(order=order, rate_id=ticket['rate'],
+                         email=ticket['email'], name=ticket['name']))
+        # Hit the database only once and create all of the OrderItems generated
+        OrderItem.objects.bulk_create(items)
+
+        # Now that the order is saved, clear the session so that they cant
+        # resubmit the order
+        self.request.session.flush()
+
+        payload = {
+            'LMID':         settings.LMID,
+            'unique_id':    str(order.transaction_id),
+            'sTotal':       str(order.order_total),
+            'webTitle':     settings.PAYMENT_TITLE,
+            'Trans_Desc':   settings.PAYMENT_DESCRIPTION,
+            'contact_info': settings.PAYMENT_CONTACT_INFO,
+            'arrayname':    'metadata',
+        }
+
+        for i, ticket in enumerate(order_data['tickets']):
+            rate = Rate.objects.get(pk=ticket['rate'])
+            payload['metadata_item_%s,%s' % (0, i)] = \
+                '%s: %s (%s)' % (rate.name, ticket['name'], ticket['email'])
+            payload['metadata_item_%s,%s' % (1, i)] = '1'
+            payload['metadata_item_%s,%s' % (2, i)] = str(rate.price)
+            payload['metadata_item_%s,%s' % (3, i)] = str(rate.price)
+            payload['metadata_item_%s,%s' % (4, i)] = settings.PSF_SPEEDTYPE
+            payload['metadata_item_%s,%s' % (5, i)] = settings.PSF_ACCT_NUMBER
+
+        context['payload'] = payload
+        context['post_url'] = settings.PAYMENT_URL
         return context
 
 
