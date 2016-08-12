@@ -202,7 +202,11 @@ class SubmitOrder(View):
         # TODO: We should use something like lxml2 to parse the form, then do
         # the second post on behalf of the customer, instead of just returning
         # the intermediate form as-is.
-        return HttpResponse(r.text)
+        response = HttpResponse(r.text)
+        for key in r.headers:
+            if key not in ['Connection', 'Keep-Alive']:
+                response[key] = r.headers[key]
+        return response
 
 
 @method_decorator(csrf_exempt, name='dispatch')
