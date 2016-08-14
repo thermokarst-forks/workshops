@@ -198,15 +198,22 @@ class SubmitOrder(View):
             payload['metadata_item_%s,%s' % (4, i)] = settings.PSF_SPEEDTYPE
             payload['metadata_item_%s,%s' % (5, i)] = settings.PSF_ACCT_NUMBER
 
-        r = requests.post(settings.PAYMENT_URL, data=payload,
-                          verify=settings.PAYMENT_CERT_BUNDLE)
-        response = HttpResponse(r.content, status=r.status_code)
-        no_hop = ['Connection', 'Keep-Alive', 'Proxy-Authenticate',
-                  'Proxy-Authorization', 'TE', 'Trailers',
-                  'Transfer-Encoding', 'Upgrade']
-        for header in r.headers:
-            if header not in no_hop:
-                response[header] = r.headers[header]
+        print(payload)
+
+        with requests.Session() as s:
+            r1 = s.post(settings.PAYMENT_URL, data=payload,
+                        verify=settings.PAYMENT_CERT_BUNDLE)
+
+            response = HttpResponse(r1.content, status=r1.status_code)
+
+            for header in r1.headers:
+                print(header)
+
+            response['Forwarded'] = 'for={0};proto=https;by={0}'.format('134.114.102.13')
+            for cookie in s.cookies:
+                response.set_cookie(cookie.name, value=cookie.value,
+                                    domain=cookie.domain, path=cookie.path,
+                                    expires=cookie.expires)
         return response
 
 
