@@ -17,7 +17,6 @@ from django.views.generic import ListView, DetailView, TemplateView, View
 from django.views.generic.edit import FormMixin
 from django.conf import settings
 
-import requests
 from extra_views import FormSetView
 
 from .models import Workshop, Order, OrderItem, Rate
@@ -156,14 +155,8 @@ class ConfirmOrder(SessionConfirmMixin, TemplateView):
         context['order_email'] = order['email']
         context['order_total'] = order['order_total']
         context['workshop'] = Workshop.objects.get(slug=kwargs['slug'])
-        return context
 
-
-class SubmitOrder(View):
-    http_method_names = ['post']
-
-    def post(self, request, *args, **kwargs):
-        order_data = request.session['order']
+        order_data = self.request.session['order']
         order = Order.objects.create(contact_email=order_data['email'],
                                      order_total=order_data['order_total'])
         items = []
@@ -173,9 +166,7 @@ class SubmitOrder(View):
         # Hit the database only once and create all of the OrderItems generated
         OrderItem.objects.bulk_create(items)
 
-        # Now that the order is saved, clear the session so that they cant
-        # resubmit the order
-        request.session.flush()
+        del self.request.session['order']
 
         payload = {
             'LMID':         settings.LMID,
@@ -197,12 +188,9 @@ class SubmitOrder(View):
             payload['metadata_item_%s,%s' % (4, i)] = settings.PSF_SPEEDTYPE
             payload['metadata_item_%s,%s' % (5, i)] = settings.PSF_ACCT_NUMBER
 
-        r = requests.post(settings.PAYMENT_URL, data=payload,
-                          verify=settings.PAYMENT_CERT_BUNDLE)
-        # TODO: We should use something like lxml2 to parse the form, then do
-        # the second post on behalf of the customer, instead of just returning
-        # the intermediate form as-is.
-        return HttpResponse(r.text)
+        context['payload'] = payload
+        context['post_url'] = settings.PAYMENT_URL
+        return context
 
 
 @method_decorator(csrf_exempt, name='dispatch')
