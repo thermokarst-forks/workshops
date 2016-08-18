@@ -37,7 +37,7 @@ class OrderItemInline(admin.TabularInline):
         return False
 
 
-class WorkshopAdmin(admin.ModelAdmin):
+class WorkshopAdmin(ExportMixin, admin.ModelAdmin):
     inlines = [InstructorInline, RateInline]
     prepopulated_fields = {'slug': ('title', 'start_date')}
     list_display = ('title', 'start_date', 'end_date', 'url', 'live',
@@ -57,7 +57,15 @@ class WorkshopAdmin(admin.ModelAdmin):
     seats_available.short_description = 'Seats available'
 
 
-class OrderAdmin(ExportMixin, admin.ModelAdmin):
+class ReadOnlyBase(ExportMixin, admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class OrderAdmin(ReadOnlyBase):
     inlines = [OrderItemInline]
     readonly_fields = ('contact_name', 'contact_email', 'order_total',
                        'billed_total', 'billed_datetime', 'transaction_id')
@@ -72,14 +80,8 @@ class OrderAdmin(ExportMixin, admin.ModelAdmin):
     paid.admin_order_field = 'billed_total'
     paid.boolean = True
 
-    def has_add_permission(self, request):
-        return False
 
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-
-class OrderItemAdmin(admin.ModelAdmin):
+class OrderItemAdmin(ReadOnlyBase):
     list_display = ('name', 'email', 'workshop', 'rate', 'paid',
                     'order_transaction_id')
     list_filter = (OrderItemWorkshopListFilter, OrderItemPaidListFilter)
