@@ -6,7 +6,10 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
+import datetime
+
 from django.test import TestCase
+from django.core.exceptions import ValidationError
 
 from .factories import (WorkshopFactory, InstructorFactory, RateFactory,
                         OrderFactory, OrderItemFactory)
@@ -55,6 +58,44 @@ class WorkshopTestCase(TestCase):
         url = 'http://workshops.example.com/%s/' % slug
         w = WorkshopFactory(slug=slug)
         self.assertEqual(w.get_absolute_url(), url)
+
+    def test_catches_bad_dates(self):
+        w = Workshop(
+            title='test shop',
+            location='test location',
+            description='lorem ipsum',
+            start_date=datetime.date(2016, 8, 24),
+            end_date=datetime.date(2016, 8, 23),
+            url='https://google.com',
+            slug='test-workshop-2016-8-24',
+            draft=False,
+            capacity=100,
+            sales_open=True
+        )
+        self.assertLess(w.end_date, w.start_date)
+        # Because save doesn't use clean we have to call it directly
+        self.assertRaises(ValidationError, w.clean)
+
+    def test_allows_good_dates(self):
+        w = Workshop(
+            title='test shop',
+            location='test location',
+            description='lorem ipsum',
+            start_date=datetime.date(2016, 8, 23),
+            end_date=datetime.date(2016, 8, 24),
+            url='https://google.com',
+            slug='test-workshop-2016-8-24',
+            draft=False,
+            capacity=100,
+            sales_open=True
+        )
+        self.assertLess(w.start_date, w.end_date)
+        raised = False
+        try:
+            w.clean()
+        except ValidationError:
+            raised = True
+        self.assertFalse(raised)
 
 
 class InstructorTestCase(TestCase):
