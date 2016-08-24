@@ -8,9 +8,9 @@
 
 from django.test import TestCase
 
-from .factories import (WorkshopFactory, InstructorFactory, OrderItemFactory,
-                        OrderFactory)
-from ..models import Workshop, Instructor, Order
+from .factories import (WorkshopFactory, InstructorFactory, RateFactory,
+                        OrderFactory, OrderItemFactory)
+from ..models import Workshop, Instructor, Rate, Order, OrderItem
 
 
 class WorkshopTestCase(TestCase):
@@ -36,9 +36,17 @@ class WorkshopTestCase(TestCase):
 class InstructorTestCase(TestCase):
     def test_creation(self):
         i = InstructorFactory(workshops=[WorkshopFactory() for i in range(5)])
+        self.assertEqual(len(i.workshops.all()), 5)
         self.assertTrue(isinstance(i, Instructor))
         self.assertEqual(str(i), i.name)
-        self.assertEqual(len(i.workshops.all()), 5)
+
+
+class RateTestCase(TestCase):
+    def test_creation(self):
+        r = RateFactory()
+        self.assertTrue(isinstance(r, Rate))
+        r_str = '%s: $%s' % (r.name, r.price)
+        self.assertEqual(str(r), r_str)
 
 
 class OrderTestCase(TestCase):
@@ -48,3 +56,10 @@ class OrderTestCase(TestCase):
         o_str = '%s: $%s on %s' % (o.contact_email, o.order_total,
                                    o.order_datetime)
         self.assertEqual(str(o), o_str)
+
+
+class OrderItemTestCase(TestCase):
+    def test_creation(self):
+        oi = OrderItemFactory()
+        self.assertTrue(isinstance(oi, OrderItem))
+        self.assertEqual(str(oi), oi.email)
