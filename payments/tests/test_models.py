@@ -37,8 +37,24 @@ class WorkshopTestCase(TestCase):
 
     def test_has_sold_out_rates(self):
         w = WorkshopFactory()
+        r = RateFactory(workshop=w, capacity=0)
+        self.assertEqual(len(w.sold_out_rates), 1)
+
+    def test_has_no_sold_out_rates(self):
+        w = WorkshopFactory()
         rates = [RateFactory(workshop=w) for i in range(5)]
         self.assertEqual(len(w.sold_out_rates), 0)
+
+    def test_generates_proper_slug(self):
+        slug = 'title-YYYY-MM-DD'
+        w = WorkshopFactory(slug=slug)
+        self.assertEqual(w.slug, slug)
+
+    def test_generates_proper_url(self):
+        slug = 'this-is-my-slug'
+        url = 'http://workshops.example.com/%s/' % slug
+        w = WorkshopFactory(slug=slug)
+        self.assertEqual(w.get_absolute_url(), url)
 
 
 class InstructorTestCase(TestCase):
