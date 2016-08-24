@@ -19,18 +19,26 @@ class WorkshopTestCase(TestCase):
         self.assertTrue(isinstance(w, Workshop))
         self.assertEqual(str(w), w.title)
 
-    def test_total_tickets_sold(self):
-        # Create a single order item (ticket)
-        oi = OrderItemFactory(order__billed_total='100.00')
-        self.assertEqual(1, oi.rate.workshop.total_tickets_sold)
+    def test_has_instructor(self):
+        w = WorkshopFactory()
+        i = InstructorFactory(workshops=[w])
+        self.assertEqual(i.workshops.first(), w)
 
-        oi = OrderItemFactory(order__billed_total='')
-        self.assertEqual(0, oi.rate.workshop.total_tickets_sold)
+    def test_is_open(self):
+        w = WorkshopFactory(sales_open=False)
+        self.assertFalse(w.is_open)
+        w.sales_open = True
+        self.assertTrue(w.is_open)
 
-    def test_is_at_capacity(self):
-        oi = OrderItemFactory(order__billed_total='asdf', rate__capacity=5,
-                              rate__workshop__capacity=5)
-        self.assertEqual(False, oi.rate.workshop.is_at_capacity)
+    def test_has_available_rates(self):
+        w = WorkshopFactory()
+        rates = [RateFactory(workshop=w) for i in range(5)]
+        self.assertEqual(len(w.available_rates), 5)
+
+    def test_has_sold_out_rates(self):
+        w = WorkshopFactory()
+        rates = [RateFactory(workshop=w) for i in range(5)]
+        self.assertEqual(len(w.sold_out_rates), 0)
 
 
 class InstructorTestCase(TestCase):
@@ -63,3 +71,16 @@ class OrderItemTestCase(TestCase):
         oi = OrderItemFactory()
         self.assertTrue(isinstance(oi, OrderItem))
         self.assertEqual(str(oi), oi.email)
+
+    def test_total_tickets_sold(self):
+        # Create a single order item (ticket)
+        oi = OrderItemFactory(order__billed_total='100.00')
+        self.assertEqual(1, oi.rate.workshop.total_tickets_sold)
+
+        oi = OrderItemFactory(order__billed_total='')
+        self.assertEqual(0, oi.rate.workshop.total_tickets_sold)
+
+    def test_is_at_capacity(self):
+        oi = OrderItemFactory(order__billed_total='asdf', rate__capacity=5,
+                              rate__workshop__capacity=5)
+        self.assertEqual(False, oi.rate.workshop.is_at_capacity)
