@@ -60,34 +60,18 @@ class WorkshopTestCase(TestCase):
         self.assertEqual(w.get_absolute_url(), url)
 
     def test_catches_bad_dates(self):
-        w = Workshop(
-            title='test shop',
-            location='test location',
-            description='lorem ipsum',
+        w = WorkshopFactory(
             start_date=datetime.date(2016, 8, 24),
-            end_date=datetime.date(2016, 8, 23),
-            url='https://google.com',
-            slug='test-workshop-2016-8-24',
-            draft=False,
-            capacity=100,
-            sales_open=True
+            end_date=datetime.date(2016, 8, 23)
         )
         self.assertLess(w.end_date, w.start_date)
         # Because save doesn't use clean we have to call it directly
         self.assertRaises(ValidationError, w.clean)
 
     def test_allows_good_dates(self):
-        w = Workshop(
-            title='test shop',
-            location='test location',
-            description='lorem ipsum',
+        w = WorkshopFactory(
             start_date=datetime.date(2016, 8, 23),
-            end_date=datetime.date(2016, 8, 24),
-            url='https://google.com',
-            slug='test-workshop-2016-8-24',
-            draft=False,
-            capacity=100,
-            sales_open=True
+            end_date=datetime.date(2016, 8, 24)
         )
         self.assertLess(w.start_date, w.end_date)
         raised = False
