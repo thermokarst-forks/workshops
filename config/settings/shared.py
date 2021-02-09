@@ -89,4 +89,3 @@ TECHNICAL_CONTACT = env.str('TECHNICAL_CONTACT', 'Problems with '
                             'purchasing a ticket? '
                             '<a href="mailto:test@test.com">'
                             'Contact us.</a>')
-DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000

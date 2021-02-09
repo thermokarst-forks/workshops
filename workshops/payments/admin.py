@@ -1,5 +1,4 @@
 from django.contrib import admin
-from django.urls import resolve
 from django.utils.html import format_html_join, format_html
 
 import markdownx
@@ -21,15 +20,8 @@ class InstructorInline(admin.TabularInline):
 class RateInline(admin.TabularInline):
     model = Rate
     extra = 1
-    fields = ('name', 'price', 'capacity', 'max_order', 'sales_open', 'private',
-              'parent', 'discount_code')
-
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == 'parent':
-            resolved = resolve(request.path_info)
-            workshop = self.parent_model.objects.get(pk=resolved.kwargs['object_id'])
-            kwargs['queryset'] = Rate.objects.filter(workshop=workshop, private=False).select_related('workshop')
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+    fields = ('name', 'price', 'capacity', 'sales_open', 'private',
+              'discount_code')
 
 
 class OrderItemInline(admin.TabularInline):

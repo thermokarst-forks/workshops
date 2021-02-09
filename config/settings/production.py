@@ -18,7 +18,6 @@ from .shared import (
     STATICFILES_DIRS,
     STATIC_ROOT,
     APPEND_SLASH,
-    DATA_UPLOAD_MAX_NUMBER_FIELDS,
 )
 
 
@@ -45,7 +44,6 @@ __all__ = [
     'STATIC_ROOT',
     'APPEND_SLASH',
     'EMAIL_BACKEND',
-    'DATA_UPLOAD_MAX_NUMBER_FIELDS',
 
     # BUSINESS LOGIC
     'ADMINS',
